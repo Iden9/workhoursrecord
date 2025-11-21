@@ -3,6 +3,11 @@
   "displayName": "Workhoursrecord",
   "description": "Work hours record",
   "version": "0.0.1",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Iden9/workhoursrecord.git"
+  },
   "engines": {
     "vscode": "^1.106.1"
   },
