@@ -25,8 +25,108 @@ interface WorkRecord {
 	totalHours: number;
 }
 
+class WorkHoursViewProvider implements vscode.WebviewViewProvider {
+	constructor(private readonly _extensionUri: vscode.Uri) {}
+
+	resolveWebviewView(webviewView: vscode.WebviewView) {
+		console.log('WorkHoursViewProvider.resolveWebviewView 被调用');
+		webviewView.webview.options = { enableScripts: true };
+		webviewView.webview.html = this.getHtmlContent();
+		console.log('Webview HTML 已设置');
+
+		webviewView.webview.onDidReceiveMessage(async message => {
+			if (message.command === 'upload') {
+				const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+				if (!workspaceFolder) {
+					vscode.window.showErrorMessage('请先打开一个工作区');
+					return;
+				}
+
+				const git: SimpleGit = simpleGit(workspaceFolder.uri.fsPath);
+				try {
+					const log: LogResult = await git.log(message.since ? { '--after': `${message.since} 00:00:00` } : {});
+					const records = new Map<string, WorkRecord>();
+
+					log.all.forEach(commit => {
+						const author = commit.author_name;
+						if (!records.has(author)) {
+							records.set(author, { author, commits: 0, commitDetails: [], dailyWork: [], totalHours: 0 });
+						}
+						const record = records.get(author)!;
+						record.commits++;
+						record.commitDetails.push({ date: new Date(commit.date), message: commit.message, hash: commit.hash });
+					});
+
+					records.forEach(record => {
+						record.commitDetails.sort((a, b) => a.date.getTime() - b.date.getTime());
+						const dayMap = new Map<string, CommitDetail[]>();
+						record.commitDetails.forEach(commit => {
+							const day = commit.date.toLocaleDateString();
+							if (!dayMap.has(day)) dayMap.set(day, []);
+							dayMap.get(day)!.push(commit);
+						});
+						dayMap.forEach((commits, day) => {
+							const first = commits[0].date;
+							const last = commits[commits.length - 1].date;
+							const hours = (last.getTime() - first.getTime()) / (1000 * 60 * 60);
+							record.dailyWork.push({ day, firstCommit: first, lastCommit: last, hours, commits });
+							record.totalHours += hours;
+						});
+					});
+
+					vscode.window.showInformationMessage(`工时数据已准备完成（模拟上传）\n总工时: ${Array.from(records.values()).reduce((sum, r) => sum + r.totalHours, 0).toFixed(2)} 小时`);
+				} catch (error) {
+					vscode.window.showErrorMessage(`读取 Git 记录失败: ${error}`);
+				}
+			}
+		});
+	}
+
+	private getHtmlContent(): string {
+		return `<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{padding:10px;font-family:Arial}
+.section{margin:20px 0}
+label{display:block;margin-bottom:5px;font-weight:bold}
+input{width:100%;padding:8px;box-sizing:border-box;margin-bottom:15px}
+button{width:100%;padding:10px;background:#007acc;color:white;border:none;cursor:pointer;font-size:14px}
+button:hover{background:#005a9e}
+.info{background:#f0f0f0;padding:10px;border-radius:4px;margin-top:15px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="section">
+<label>统计起始日期</label>
+<input type="date" id="sinceDate" placeholder="留空则统计全部">
+</div>
+<button onclick="upload()">上传工时到服务器</button>
+<div class="info">
+<strong>说明：</strong><br>
+点击上传按钮将统计工时数据并上传到服务器（当前为模拟功能）
+</div>
+<script>
+const vscode=acquireVsCodeApi();
+function upload(){
+const since=document.getElementById('sinceDate').value;
+vscode.postMessage({command:'upload',since:since||null});
+}
+</script>
+</body>
+</html>`;
+	}
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	console.log('工时记录插件已激活');
+
+	const provider = new WorkHoursViewProvider(context.extensionUri);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider('workhoursrecordView', provider, {
+			webviewOptions: { retainContextWhenHidden: true }
+		})
+	);
 
 	const showWorkHours = vscode.commands.registerCommand('workhoursrecord.showWorkHours', async () => {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];

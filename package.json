@@ -14,7 +14,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:workhoursrecordView"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -25,8 +27,30 @@
       {
         "command": "workhoursrecord.exportCSV",
         "title": "工时统计: 导出CSV"
+      },
+      {
+        "command": "workhoursrecord.uploadWorkHours",
+        "title": "上传工时到服务器"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "workhoursrecord",
+          "title": "工时统计",
+          "icon": "$(clock)"
+        }
+      ]
+    },
+    "views": {
+      "workhoursrecord": [
+        {
+          "type": "webview",
+          "id": "workhoursrecordView",
+          "name": "工时管理"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
