@@ -3,6 +3,7 @@
   "displayName": "Workhoursrecord",
   "description": "Work hours record",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "icon": "icon.png",
   "repository": {
     "type": "git",
