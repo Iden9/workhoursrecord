@@ -2,7 +2,7 @@
   "name": "workhoursrecord",
   "displayName": "Workhoursrecord",
   "description": "Work hours record",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "Apache-2.0",
   "icon": "icon.png",
   "repository": {
@@ -16,7 +16,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:workhoursrecordView"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -32,6 +32,10 @@
       {
         "command": "workhoursrecord.uploadWorkHours",
         "title": "上传工时到服务器"
+      },
+      {
+        "command": "workhoursrecord.clearStats",
+        "title": "工时统计: 清除编辑统计数据"
       }
     ],
     "viewsContainers": {
